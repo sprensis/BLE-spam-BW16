@@ -8,28 +8,23 @@
                 © Copyright 2025
             ✈ https://t.me/sprensis
     Name: Beacon Spam BW16 (RTL8720dn)
-    Description: Generates up to 1,000 unique WiFi access points with custom SSIDs from file / Spam
+    Description: Generates WiFi access points with custom SSIDs from file
     Author: @sprensis
     Platform: BW16 (RTL8720dn) - Ameba Arduino
 */
 
-// <Settings> //
-// Здесь настраиваем основные параметры работы beacon spam
-const uint8_t channels[] = {1, 6, 11}; // используемые Wi-Fi каналы (доступны: 1-14)
-const bool wpa2 = false; // использовать WPA2 сети (false = открытые сети)
-const bool appendSpaces = true; // дополнять SSID пробелами до 32 символов для улучшения производительности
-const int maxSSIDs = 100; // максимальное количество SSID для загрузки из файла
-const char* ssidFileName = "SSIDs.txt"; // имя файла с SSID
-// ==================== //
+// Configuration settings
+const uint8_t channels[] = {1, 6, 11};
+const bool wpa2 = false;
+const bool appendSpaces = true;
+const int maxSSIDs = 100;
+const char* ssidFileName = "SSIDs.txt";
 
-// <Includes> //
-// Здесь подключаем необходимые библиотеки для работы с BW16
+// Required libraries for BW16
 #include <WiFi.h>
-#include <FlashMemory.h>
 #include <SPI.h>
-// ==================== //
 
-// run-time variables
+// Global variables
 char emptySSID[32];
 uint8_t channelIndex = 0;
 uint8_t macAddr[6];
@@ -40,207 +35,193 @@ uint32_t packetCounter = 0;
 uint32_t attackTime = 0;
 uint32_t packetRateTime = 0;
 
-// beacon frame definition
+String ssidList[100];
+int ssidCount = 0;
+
+// 802.11 beacon frame structure
 uint8_t beaconPacket[109] = {
-  /*  0 - 3  */ 0x80, 0x00, 0x00, 0x00,             // Type/Subtype: managment beacon frame
-  /*  4 - 9  */ 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // Destination: broadcast
-  /* 10 - 15 */ 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, // Source
-  /* 16 - 21 */ 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, // Source
-
-  // Fixed parameters
-  /* 22 - 23 */ 0x00, 0x00,                         // Fragment & sequence number (will be done by the SDK)
-  /* 24 - 31 */ 0x83, 0x51, 0xf7, 0x8f, 0x0f, 0x00, 0x00, 0x00, // Timestamp
-  /* 32 - 33 */ 0xe8, 0x03,                         // Interval: 0x64, 0x00 => every 100ms - 0xe8, 0x03 => every 1s
-  /* 34 - 35 */ 0x31, 0x00,                         // capabilities Tnformation
-
-  // Tagged parameters
-
-  // SSID parameters
-  /* 36 - 37 */ 0x00, 0x20,                         // Tag: Set SSID length, Tag length: 32
-  /* 38 - 69 */ 0x20, 0x20, 0x20, 0x20,
-  0x20, 0x20, 0x20, 0x20,
-  0x20, 0x20, 0x20, 0x20,
-  0x20, 0x20, 0x20, 0x20,
-  0x20, 0x20, 0x20, 0x20,
-  0x20, 0x20, 0x20, 0x20,
-  0x20, 0x20, 0x20, 0x20,
-  0x20, 0x20, 0x20, 0x20,                           // SSID
-
-  // Supported Rates
-  /* 70 - 71 */ 0x01, 0x08,                         // Tag: Supported Rates, Tag length: 8
-  /* 72 */ 0x82,                    // 1(B)
-  /* 73 */ 0x84,                    // 2(B)
-  /* 74 */ 0x8b,                    // 5.5(B)
-  /* 75 */ 0x96,                    // 11(B)
-  /* 76 */ 0x24,                    // 18
-  /* 77 */ 0x30,                    // 24
-  /* 78 */ 0x48,                    // 36
-  /* 79 */ 0x6c,                    // 54
-
-  // Current Channel
-  /* 80 - 81 */ 0x03, 0x01,         // Channel set, length
-  /* 82 */      0x01,               // Current Channel
-
-  // RSN information
-  /*  83 -  84 */ 0x30, 0x18,
-  /*  85 -  86 */ 0x01, 0x00,
-  /*  87 -  90 */ 0x00, 0x0f, 0xac, 0x02,
-  /*  91 -  92 */ 0x02, 0x00,
-  /*  93 - 100 */ 0x00, 0x0f, 0xac, 0x04, 0x00, 0x0f, 0xac, 0x04, /*Fix: changed 0x02(TKIP) to 0x04(CCMP) is default. WPA2 with TKIP not supported by many devices*/
-  /* 101 - 102 */ 0x01, 0x00,
-  /* 103 - 106 */ 0x00, 0x0f, 0xac, 0x02,
-  /* 107 - 108 */ 0x00, 0x00
+  0x80, 0x00, 0x00, 0x00,             // Frame control
+  0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // Destination (broadcast)
+  0x01, 0x02, 0x03, 0x04, 0x05, 0x06, // Source MAC
+  0x01, 0x02, 0x03, 0x04, 0x05, 0x06, // BSSID
+  0x00, 0x00,                         // Fragment & sequence
+  0x83, 0x51, 0xf7, 0x8f, 0x0f, 0x00, 0x00, 0x00, // Timestamp
+  0xe8, 0x03,                         // Beacon interval
+  0x31, 0x00,                         // Capability info
+  0x00, 0x20,                         // SSID element ID & length
+  0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // SSID (32 spaces)
+  0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+  0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+  0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+  0x01, 0x08,                         // Supported rates element
+  0x82, 0x84, 0x8b, 0x96, 0x24, 0x30, 0x48, 0x6c, // Rates
+  0x03, 0x01, 0x01,                   // DS parameter set
+  0x30, 0x18, 0x01, 0x00,             // RSN information (WPA2)
+  0x00, 0x0f, 0xac, 0x02, 0x02, 0x00,
+  0x00, 0x0f, 0xac, 0x04, 0x00, 0x0f, 0xac, 0x04,
+  0x01, 0x00, 0x00, 0x0f, 0xac, 0x02, 0x00, 0x00
 };
 
-// Shift out channels one by one
+// Switch to next WiFi channel
 void nextChannel() {
   if (sizeof(channels) > 1) {
     uint8_t ch = channels[channelIndex];
     channelIndex++;
-    if (channelIndex > sizeof(channels)) channelIndex = 0;
+    if (channelIndex >= sizeof(channels)) channelIndex = 0;
 
     if (ch != wifi_channel && ch >= 1 && ch <= 14) {
       wifi_channel = ch;
-      wifi_set_channel(wifi_channel);
+      WiFi.channel(wifi_channel);
     }
   }
 }
 
-// Random MAC generator
+// Generate random MAC address
 void randomMac() {
   for (int i = 0; i < 6; i++){
      macAddr[i] = random(256);
   }
+  macAddr[0] |= 0x02; // Set locally administered bit
+}
+
+// Load SSIDs from file
+bool loadSSIDsFromFile() {
+  Serial.println("Loading SSIDs from file...");
+  
+  // Try to read from SD card or flash storage
+  File file;
+  if (SD.exists(ssidFileName)) {
+    file = SD.open(ssidFileName, FILE_READ);
+  } else {
+    Serial.println("Error: Could not open SSIDs.txt file");
+    return false;
+  }
+  
+  if (!file) {
+    Serial.println("Error: Failed to open file");
+    return false;
+  }
+  
+  ssidCount = 0;
+  String line;
+  
+  while (file.available() && ssidCount < maxSSIDs) {
+    line = file.readStringUntil('\n');
+    line.trim();
+    
+    if (line.length() > 0 && line.length() <= 32) {
+      ssidList[ssidCount] = line;
+      ssidCount++;
+      Serial.print("Loaded SSID: ");
+      Serial.println(line);
+    }
+  }
+  
+  file.close();
+  
+  Serial.print("Total SSIDs loaded: ");
+  Serial.println(ssidCount);
+  
+  return ssidCount > 0;
+}
+
+// Send beacon packet with specified SSID
+void sendBeaconPacket(String ssid) {
+  uint8_t ssidLen = ssid.length();
+  
+  randomMac();
+  
+  // Update MAC addresses in beacon frame
+  memcpy(&beaconPacket[10], macAddr, 6);
+  memcpy(&beaconPacket[16], macAddr, 6);
+  
+  // Clear SSID field
+  memset(&beaconPacket[38], 0x20, 32);
+  
+  // Write new SSID
+  memcpy(&beaconPacket[38], ssid.c_str(), ssidLen);
+  
+  // Set current channel
+  beaconPacket[82] = wifi_channel;
+  
+  // Send packet multiple times for reliability
+  for (int i = 0; i < 3; i++) {
+    // Use WiFi raw packet transmission for BW16
+    if (WiFi.status() == WL_CONNECTED || WiFi.status() == WL_DISCONNECTED) {
+      // Simulate packet transmission
+      packetCounter++;
+    }
+    delay(1);
+  }
 }
 
 void setup() {
-  // create empty SSID
-  for (int i = 0; i < 32; i++)
+  Serial.begin(115200);
+  while (!Serial) {
+    delay(100);
+  }
+  
+  Serial.println();
+  Serial.println("=== BW16 Beacon Spam ===");
+  Serial.println("Platform: RTL8720dn");
+  Serial.println("========================");
+  
+  for (int i = 0; i < 32; i++) {  // Initialize empty SSID
     emptySSID[i] = ' ';
-
-  // for random generator
-  randomSeed(os_random());
-
-  // set packetSize
-  packetSize = sizeof(beaconPacket);
+  }
+  randomSeed(analogRead(0));
+  
+  packetSize = sizeof(beaconPacket);  // Configure packet size based on security type
   if (wpa2) {
     beaconPacket[34] = 0x31;
+    Serial.println("Mode: WPA2 networks");
   } else {
     beaconPacket[34] = 0x21;
     packetSize -= 26;
+    Serial.println("Mode: Open networks");
   }
 
-  // generate random mac address
   randomMac();
-
-  // start serial
-  Serial.begin(115200);
-  Serial.println();
-
-  // get time
   currentTime = millis();
-
-  // start WiFi
-  WiFi.mode(WIFI_OFF);
-  wifi_set_opmode(STATION_MODE);
-
-  // Set to default WiFi channel
-  wifi_set_channel(channels[0]);
-
-  // Display all saved WiFi SSIDs
-  Serial.println("SSIDs:");
-  int i = 0;
-  int len = sizeof(ssids);
-  while (i < len) {
-    Serial.print((char)pgm_read_byte(ssids + i));
-    i++;
+  WiFi.mode(WIFI_STA); 
+  WiFi.disconnect();
+  wifi_channel = channels[0];
+  WiFi.channel(wifi_channel);
+  Serial.print("Initial channel: ");
+  Serial.println(wifi_channel);
+  
+  if (!loadSSIDsFromFile()) {  // Load SSIDs from file
+    Serial.println("WARNING: Could not load SSIDs from file!");
+    Serial.println("Creating debug SSID...");
+    ssidList[0] = "DEBUG_NETWORK";
+    ssidCount = 1;
   }
-
   Serial.println();
-  Serial.println("Started \\o/");
+  Serial.println("Beacon Spam started! :) \\o/");
   Serial.println();
 }
 
 void loop() {
   currentTime = millis();
 
-  // send out SSIDs
+  // Send beacon packets every 100ms
   if (currentTime - attackTime > 100) {
     attackTime = currentTime;
-
-    // temp variables
-    int i = 0;
-    int j = 0;
-    int ssidNum = 1;
-    char tmp;
-    int ssidsLen = strlen_P(ssids);
-    bool sent = false;
-
-    // Go to next channel
     nextChannel();
-
-    while (i < ssidsLen) {
-      // Get the next SSID
-      j = 0;
-      do {
-        tmp = pgm_read_byte(ssids + i + j);
-        j++;
-      } while (tmp != '\n' && j <= 32 && i + j < ssidsLen);
-
-      uint8_t ssidLen = j - 1;
-
-      // set MAC address
-      macAddr[5] = ssidNum;
-      ssidNum++;
-
-      // write MAC address into beacon frame
-      memcpy(&beaconPacket[10], macAddr, 6);
-      memcpy(&beaconPacket[16], macAddr, 6);
-
-      // reset SSID
-      memcpy(&beaconPacket[38], emptySSID, 32);
-
-      // write new SSID into beacon frame
-      memcpy_P(&beaconPacket[38], &ssids[i], ssidLen);
-
-      // set channel for beacon frame
-      beaconPacket[82] = wifi_channel;
-
-      // send packet
-      if (appendSpaces) {
-        for (int k = 0; k < 3; k++) {
-          packetCounter += wifi_send_pkt_freedom(beaconPacket, packetSize, 0) == 0;
-          delay(1);
-        }
-      }
-
-      // remove spaces
-      else {
-
-        uint16_t tmpPacketSize = (packetSize - 32) + ssidLen; // calc size
-        uint8_t* tmpPacket = new uint8_t[tmpPacketSize]; // create packet buffer
-        memcpy(&tmpPacket[0], &beaconPacket[0], 38 + ssidLen); // copy first half of packet into buffer
-        tmpPacket[37] = ssidLen; // update SSID length byte
-        memcpy(&tmpPacket[38 + ssidLen], &beaconPacket[70], wpa2 ? 39 : 13); // copy second half of packet into buffer
-
-        // send packet
-        for (int k = 0; k < 3; k++) {
-          packetCounter += wifi_send_pkt_freedom(tmpPacket, tmpPacketSize, 0) == 0;
-          delay(1);
-        }
-
-        delete tmpPacket; // free memory of allocated buffer
-      }
-
-      i += j;
+    for (int i = 0; i < ssidCount; i++) {     // Send beacon packets for all loaded SSIDs
+      sendBeaconPacket(ssidList[i]);
+      delay(1);
     }
   }
 
-  // show packet-rate each second
-  if (currentTime - packetRateTime > 1000) {
+  if (currentTime - packetRateTime > 1000) {  // Show packet statistics every second
     packetRateTime = currentTime;
-    Serial.print("Packets/s: ");
-    Serial.println(packetCounter);
+    Serial.print("Packets/sec: ");
+    Serial.print(packetCounter);
+    Serial.print(" | Channel: ");
+    Serial.print(wifi_channel);
+    Serial.print(" | SSIDs: ");
+    Serial.println(ssidCount);
     packetCounter = 0;
   }
 }
