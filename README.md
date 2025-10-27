@@ -46,8 +46,7 @@ A Wi-Fi beacon-frame generator for the BW16 (RTL8720dn) board intended for penet
    ```bash
    git clone https://github.com/sprensis/Beacon-Spam-BW16.git
    cd Beacon-Spam-BW16
-````
-
+```
 
 2. **Configure the Arduino IDE**
 
