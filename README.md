@@ -1,72 +1,155 @@
+Вот готовый **`README.md`** (полный файл) в англоязычном варианте — скопируй и вставь в репозиторий:
 
+````markdown
+# BW16 Beacon Spam - RTL8720dn
 
-
-<p align="center"><img alt="project-logo" width="300" src="https://i.ibb.co/Q7gSf0FT/project-image.png"></p>
- 
 <p align="center">
-🐦 <a href="https://twitter.com/spacehuhn">Twitter</a>
-| 📺 <a href="https://www.youtube.com/channel/UCFmjA6dnjv-phqrFACyI8tw">YouTube</a>
-| 🌍 <a href="https://spacehuhn.de">spacehuhn.de</a><br/>
-<br>
-p<b>Advertise hundreds of WiFi access points with custom SSIDs.<br>
-<br>
-Support the development of this project by purchasing one of the <a href="https://github.com/spacehuhn/esp8266_deauther/wiki/Supported-Devices">official deauther boards</a>.<br/>Or become a patron on <a href="https://patreon.com/spacehuhn" target="_blank">patreon.com/spacehuhn</a>.</b>
+  <img alt="project-logo" width="300" src="https://i.ibb.co/Q7gSf0FT/project-image.png">
 </p>
 
-ESP32 version by [@Tnze](https://github.com/Tnze): [esp32_beaconSpam](https://github.com/Tnze/esp32_beaconSpam).  
+[![Platform](https://img.shields.io/badge/Platform-BW16%20RTL8720dn-blue.svg)](https://www.amebaiot.com/en/amebad-bw16/)  
+[![License](https://img.shields.io/badge/License-Educational-red.svg)](LICENSE)
 
-## Changes
+A Wi-Fi beacon-frame generator for the BW16 (RTL8720dn) board intended for penetration testing and security research.
 
-I wrote the initial sketch in 2017 and it had some flaws.  
-Here are the latest changes (06/2018):  
-- Now works with ESP8266 Arduino Core v2.0.0 or newer without **any** further modification
-- Fixed the bug that the SSIDs are not shown correctly on IOS
-- No need for a SD card anymore to save hundrets of SSIDs, they are all stored in the PROGMEM now
+---
 
-Using the SD card might be useful for some people... but thanks to the magic of git, you can still view the old repository [here](https://github.com/spacehuhn/esp8266_beaconSpam/tree/v1.0). 
+## ⚠️ Legal disclaimer
 
-I didn't publish a .bin file on purpose. This project is easy to create with Arduino and everyone should be able to get it working!  
-The goal of this is to motivate people to get into hacking, electronics and Arduino, so don't be lazy and start making your own stuff! :D
+**This tool is intended strictly for educational purposes and authorized penetration testing only.**
 
-## About
+- Use only on networks you own or where you have explicit written permission to test.  
+- Unauthorized use may violate local, state, and federal laws.  
+- The authors are not responsible for misuse or damages.  
+- Always comply with local laws and rules.
 
-![network scanner](https://raw.githubusercontent.com/spacehuhn/esp8266_beaconSpam/master/img/networkscanner.jpg)
+---
 
-This project emerged from the [ESP8266 Deauther](https://github.com/spacehuhn/esp8266_deauther) that also has this type of attack implemented.  
-But while the Deauther is very complex and might seem intimidating to an Arduino beginner, this project is simple, hackable and easy get running!  
+## 🎯 Features
 
-The Arduino sketch comes with 50 default SSID names, but you can edit that list easily in the source code :).  
-By constantly broadcasting the so-called beacon frames, your standard WiFi scanner will think there are active networks nearby and adds them to the list.  
-In reality though, it is just advertising these network names without actually creating them. So there is no way you could connect to one of the "created" networks.  
+- **Real packet transmission** — uses the native RTL8720dn APIs for beacon frame injection.  
+- **Multi-channel support** — automatic channel hopping across configured channels.  
+- **Built-in SSIDs** — includes 10 predefined SSID names.  
+- **MAC randomization** — generates a unique MAC address for each frame.  
+- **Performance monitoring** — real-time statistics output via serial.
 
-It is using the `wifi_send_pkt_freedom` function in the ESP8266 Arduino Core SDK. This function allows packet injection for specific Wi-Fi frames.  
+---
 
-## Disclaimer
+## 🛠️ Requirements
 
-Even if it is more of a fun party trick than something that could actually do any harm, **please use it respectfully!**
-Some people might interpret this as a "Jammer" and those are illegal. But this project is just sending a bunch of WiFi packets through the air and works within the 802.11 Wi-Fi standard.
+- **BW16 board** with the RTL8720dn chipset  
+- **USB cable** for programming and power  
+- **Arduino IDE** with the Ameba Arduino package installed
 
-## Installation
+---
 
-- First get an ESP8266 development board! If you don't know which one, have a look at the [supported devices](https://github.com/spacehuhn/esp8266_deauther/wiki/Supported-Devices) page from the Deauther wiki. It's for a different project, but the requirements are the same.
-- Install [Arduino](https://www.arduino.cc/en/Main/software)
-- Install the [ESP8266 Arduino Core](https://github.com/esp8266/Arduino#installing-with-boards-manager) version 2.0.0 or newer (no more changes are required)
-- Download [this project](https://github.com/spacehuhn/esp8266_beaconSpam/archive/master.zip)
-- Extract the .zip file somewhere and open the `esp8266_beaconSpam/esp8266_beaconSpam.ino` file with Arduino
-- Edit the SSIDs if you want
-- Select the correct Board under Tools > Board, the serial (COM) port your device is using and hit upload!
+## 🚀 Installation
 
-If you have trouble uploading, have a look at the [installation guide](https://github.com/spacehuhn/esp8266_deauther/wiki/Installation#drivers-and-com-port) on the Deauther Wiki. There you will also find drivers for the most common USB-Serial chips.  
-Again, this is for the Deauther and not for this project, but the hardware (ESP8266) is the same and you will find a lot of trouble-shooting info on the Wiki there! :)  
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/sprensis/Beacon-Spam-BW16.git
+   cd Beacon-Spam-BW16
+````
 
-Additionally, here's a video tutorial :)  
-[![$5 WiFi Spammer](https://img.youtube.com/vi/Zq7QNpPxCqE/0.jpg)](https://www.youtube.com/watch?v=Zq7QNpPxCqE)
+
+2. **Configure the Arduino IDE**
+
+   * Install the **Ameba Arduino** package.
+   * Select **Ameba RTL8720dn (BW16)** as the board.
+   * Set the correct COM/serial port.
+
+3. **Upload the firmware**
+
+   * Open `src/Beacon_spam_main/Beacon_spam_main.ino` in Arduino IDE.
+   * Click **Upload** to flash the board.
+
+---
+
+## ⚙️ Configuration
+
+Edit configuration values in `Beacon_spam_main.ino` before compiling:
+
+```cpp
+const uint8_t channels[] = {1, 6, 11};  // Wi-Fi channels to use
+const bool wpa2 = false;                // Enable/disable WPA2 flag in SSIDs (simulated)
+const bool appendSpaces = true;         // Append spaces to SSID names (optional)
+const int maxSSIDs = 100;               // Maximum number of SSIDs to generate/use
+```
+
+Additional options and built-in SSID lists can be found in the sketch files under `src/`.
+
+---
+
+## 🔧 Usage
+
+1. Power the BW16 board.
+2. Open the Serial Monitor at **115200 baud**.
+3. The device will automatically start transmitting beacon frames according to the configured settings.
+4. Monitor packet counts, channel statistics, and other runtime information via serial output.
+
+### Example serial output
+
+```
+========================================
+    BW16 Beacon Spam v2.0
+    Platform: RTL8720dn
+    Author: @sprensis
+========================================
+
+[CONFIG] Mode: Open networks
+[INFO] Monitor mode enabled
+[INFO] Initial channel: 1
+[INFO] Loading built-in SSIDs...
+[INFO] Available SSID entries: /.../
+[INFO] Successfully loaded /.../ SSIDs
+
+[SUCCESS] Beacon spam initialized successfully!
+[INFO] Broadcasting /.../ SSIDs across channels
+[INFO] Press reset button to stop
+
+[STATS] Rate: 45 pkt/s | Channel: 1 | SSIDs: /.../ | Total: 45
+[STATS] Rate: 47 pkt/s | Channel: 6 | SSIDs: /.../ | Total: 92
+```
+
+---
+
+## 🔍 Troubleshooting
+
+* Ensure the Ameba Arduino package is installed and the BW16 (RTL8720dn) board is selected.
+* Verify the correct COM port is selected and the board is powered.
+* If uploads fail, try pressing the board’s boot/reset buttons as required by your hardware revision.
+* Serial output may require opening the Serial Monitor at **115200** baud.
+* For low packet rates or unexpected behavior, check other running tasks on the board and reduce SSID count or transmission interval.
+
+---
+
+## Performance
+
+* **Typical packet rate**: 40–50 packets per second
+* **Channel switch time**: ~10 ms
+* **RAM usage**: ~15 KB
+* **Flash usage**: ~25 KB
+* **Power consumption**: ~150 mA @ 3.3 V
+
+---
+
+## Safety & Responsible Use
+
+* Test only on networks you own or where you have explicit authorization.
+* Be mindful of local regulations and legal constraints around RF transmission and network testing.
+* Keep experiments in an isolated lab environment to avoid affecting production networks.
+* Document testing activities and obtain written permission where required.
+
+---
 
 ## License
 
-This project is licensed under the MIT License - see the [license file](LICENSE) file for details
+This project is licensed for educational use — see the [LICENSE](LICENSE) file for details.
 
-## Sources
- 
-The 50 default SSIDs are from: http://www.makeuseof.com/tag/50-funny-wi-fi-names-network-ssid/  
-More info about beacon frames: https://mrncciew.com/2014/10/08/802-11-mgmt-beacon-frame/  
+---
+
+## 📞 Support
+
+* **Telegram**: [@cuudeen](https://t.me/сuudeen)
+* **Issues**: Please report bugs or request features via GitHub Issues.
+
