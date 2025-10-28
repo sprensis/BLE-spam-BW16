@@ -1,4 +1,4 @@
-# BW16 Beacon Spam - RTL8720dn
+# BW16 BLE Spam (RTL8720DN)
 
 <p align="center">
   <img alt="project-logo" width="300" src="https://i.ibb.co/Q7gSf0FT/project-image.png">
@@ -9,106 +9,46 @@
 
 ---
 
-## Disclaimer
-
-**This tool is intended strictly for educational purposes and authorized penetration testing only.**
-
----
+A minimal Ameba Arduino (BW16 / RTL8720DN) project that advertises crafted BLE beacons for Apple (manufacturer frames), Microsoft, Google Fast Pair, and Samsung. It exposes a simple Wi‑Fi Access Point with an HTTP UI to start/stop spam and pick a payload type.
 
 ## Features
+- BLE advertising using Ameba RTL8720DN APIs
+- Wi‑Fi AP + web UI (English) on port `80`
+- Payload types: `Apple`, `Microsoft`, `Google`, `Samsung`, `SourApple`
+- Start/Stop control and status view
+- Serial logging for diagnostics.
 
-- **Real packet transmission** — uses the native RTL8720dn APIs for beacon frame injection.  
-- **Multi-channel support** — automatic channel hopping across configured channels.  
-- **Built-in SSIDs** — includes 10 predefined SSID names.  
-- **MAC randomization** — generates a unique MAC address for each frame.  
-- **Performance monitoring** — real-time statistics output via serial.
+## Setup: Arduino IDE (BW16 / RTL8720DN)
+1. Install Arduino IDE (2.x preferred)
+2. Open `Arduino IDE → Preferences` and add this URL to `Additional Boards Manager URLs`:
+   - `https://raw.githubusercontent.com/ambiot/ambd_arduino/master/Arduino_package/package_realtek_amebad_index.json`
+3. Go to `Tools → Board → Boards Manager…` and search for `Realtek AmebaD`
+4. Install the package for `AmebaD (RTL8720DN)`
+5. Select the board: `Tools → Board → AmebaD [RTL8720DN] → BW16` (or `Generic AmebaD (RTL8720DN)` if BW16 is not listed)
+6. Select the serial port of your BW16 under `Tools → Port`
+7. Open this project in Arduino IDE and build/upload.
 
----
-
-## Requirements
-
-- **BW16 board** with the RTL8720dn chipset  
-- **USB cable** for programming and power  
-- **Arduino IDE** with the Ameba Arduino package installed
-
----
-
-## Configuration
-
-Edit configuration values in `Beacon_spam_main.ino` before compiling:
-
-```cpp
-const uint8_t channels[] = {1, 6, 11};  // Wi-Fi channels to use
-const bool wpa2 = false;                // Enable/disable WPA2 flag in SSIDs (simulated)
-const bool appendSpaces = true;         // Append spaces to SSID names (optional)
-const int maxSSIDs = 100;               // Maximum number of SSIDs to generate/use
-```
-
-Additional options and built-in SSID lists can be found in the sketch files under `src/`.
-
----
+Notes:
+- Required libraries (`WiFi`, `BLE`) are provided with the AmebaD board package.
+- If compilation errors appear, ensure the AmebaD package is installed and selected; do not use ESP32 or other cores for BW16.
 
 ## Usage
+- Power the board after flashing
+- Connect to AP `BW16-Spam` (password `bw16spam`). You can change SSID/pass in `src/main/main.ino` (`AP_SSID`, `AP_PASS`). Note: ESP32 requires password length ≥ 8; Ameba uses secure AP without explicit channel and falls back to OPEN AP on channels 6/1/11 if WPA2 fails.
+- Open `http://192.168.1.1/` in your browser (typical AP gateway). If it differs, check your device’s Wi‑Fi gateway IP
+- Pick a type, click `Start` to begin advertising.
+- Click `Stop` to halt advertising.
 
-1. Power the BW16 board.
-2. Open the Serial Monitor at **115200 baud**.
-3. The device will automatically start transmitting beacon frames according to the configured settings.
-4. Monitor packet counts, channel statistics, and other runtime information via serial output.
+## Troubleshooting
+- If you see errors like `random() expects 2 arguments`, ensure you compile with the Realtek AmebaD (RTL8720DN) core. This project uses the two‑argument `random(min, max)` form
+- If `WiFi.apbegin(...)` type errors occur, verify you selected the AmebaD core and not ESP32. The project calls the AmebaD `apbegin(ssid, password, channel)` or `apbegin(ssid, channelStr)` APIs depending on core version
+- If AP startup logs show `ioctl[RTKIOCSIWFREQ] error` followed by `ERROR: Operation failed!`, your core may ignore/require different channel argument formats in secure AP mode. The firmware now automatically falls back to OPEN AP and tries channels `6 → 1 → 11`. You should be able to connect to the open AP if WPA2 fails on your SDK.
+- PlatformIO is not supported for BW16; use Arduino IDE.
 
-### Example serial output
+## Notes
+- TX power control is not exposed in Ameba Arduino BLE API
+- MAC randomization at Arduino level may be limited; advertising uses platform MAC
+- PlatformIO: BW16 (AmebaD) is not officially supported; `platformio.ini` here is a placeholder. Use Arduino IDE for builds.
 
-```
-========================================
-    BW16 Beacon Spam v2.0
-    Platform: RTL8720dn
-    Author: @sprensis
-========================================
-
-[CONFIG] Mode: Open networks
-[INFO] Monitor mode enabled
-[INFO] Initial channel: 1
-[INFO] Loading built-in SSIDs...
-[INFO] Available SSID entries: /.../
-[INFO] Successfully loaded /.../ SSIDs
-
-[SUCCESS] Beacon spam initialized successfully!
-[INFO] Broadcasting /.../ SSIDs across channels
-[INFO] Press reset button to stop
-
-[STATS] Rate: 45 pkt/s | Channel: 1 | SSIDs: /.../ | Total: 45
-[STATS] Rate: 47 pkt/s | Channel: 6 | SSIDs: /.../ | Total: 92
-```
-
----
-
-## 🔍 Troubleshooting
-
-* Ensure the Ameba Arduino package is installed and the BW16 (RTL8720dn) board is selected
-* Verify the correct COM port is selected and the board is powered
-* If uploads fail, try pressing the board’s boot/reset buttons as required by your hardware revision
-* Serial output may require opening the Serial Monitor at **115200** baud
-* For low packet rates or unexpected behavior, check other running tasks on the board and reduce SSID count or transmission interval
-
----
-
-## Performance
-
-* **Typical packet rate**: 40–50 packets per second
-* **Channel switch time**: ~10 ms
-* **RAM usage**: ~15 KB
-* **Flash usage**: ~25 KB
-* **Power consumption**: ~150 mA @ 3.3 V
-
----
-
-## License
-
-This project is licensed for educational use — see the [LICENSE](LICENSE) file for details.
-
----
-
-## 📞 Support
-
-* **Telegram**: [@cuudeen](https://t.me/сuudeen)
-* **Issues**: Please report bugs or request features via GitHub Issues.
-
+## Disclaimer
+This project is for educational and authorized testing purposes only. Misuse can be illegal and unethical. You are solely responsible for your actions.
